@@ -1,0 +1,8 @@
+Name: database-modeling
+Description: Design relational database schema for persistence
+Components:
+  - SQLModel table definitions
+  - Foreign key relationships
+  - Indexing strategy
+  - Timestamp management
+Reusable: true
