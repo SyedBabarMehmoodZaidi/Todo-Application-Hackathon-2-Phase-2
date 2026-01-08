@@ -6,7 +6,7 @@ import { Task, TaskCreate, TaskUpdate, TaskCompletionUpdate } from '../../../typ
 import TaskList from '../../../../components/TaskList';
 import TaskForm from '../../../../components/TaskForm';
 import TaskSkeleton from '../../../../components/TaskSkeleton';
-import api from '../../../lib/api';
+import { apiClient } from '../../../lib/api'; 
 
 const TasksPage: React.FC = () => {
   const { user, loading } = useAuth();
@@ -24,12 +24,14 @@ const TasksPage: React.FC = () => {
     }
   }, [user]);
 
-  // ✅ SINGLE fetchTasks
+  // ✅ SINGLE fetchTasks using apiClient
   const fetchTasks = async () => {
+    if (!user) return;
+
     try {
       setIsLoading(true);
-      const response = await api.get(`/api/${user?.id}/tasks`);
-      setTasks(response.data);
+      const response = await apiClient.getUserTasks(user.id); // ✅ use getUserTasks
+      setTasks(response.data || []);
     } catch (err) {
       setError('Failed to load tasks');
       console.error(err);
@@ -39,9 +41,11 @@ const TasksPage: React.FC = () => {
   };
 
   const handleAddTask = async (taskData: TaskCreate) => {
+    if (!user) return;
+
     try {
       setIsLoading(true);
-      const response = await api.post(`/api/${user?.id}/tasks`, taskData);
+      const response = await apiClient.createTodo(taskData); // ✅ createTodo
       setTasks(prev => [response.data, ...prev]);
       setShowForm(false);
     } catch (err) {
@@ -57,13 +61,8 @@ const TasksPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      const response = await api.put(
-        `/api/${user?.id}/tasks/${editingTask.id}`,
-        taskData
-      );
-      setTasks(prev =>
-        prev.map(task => (task.id === editingTask.id ? response.data : task))
-      );
+      const response = await apiClient.updateTodo(editingTask.id, taskData); // ✅ updateTodo
+      setTasks(prev => prev.map(task => (task.id === editingTask.id ? response.data : task)));
       setEditingTask(null);
       setShowForm(false);
     } catch (err) {
@@ -77,16 +76,9 @@ const TasksPage: React.FC = () => {
   const handleToggleComplete = async (task: Task) => {
     try {
       setIsLoading(true);
-      const updateData: TaskCompletionUpdate = {
-        is_completed: !task.is_completed,
-      };
-      const response = await api.patch(
-        `/api/${user?.id}/tasks/${task.id}/complete`,
-        updateData
-      );
-      setTasks(prev =>
-        prev.map(t => (t.id === task.id ? response.data : t))
-      );
+      const updateData: TaskCompletionUpdate = { is_completed: !task.is_completed };
+      const response = await apiClient.toggleTodoCompletion(task.id, !task.is_completed); // ✅ toggleTodoCompletion
+      setTasks(prev => prev.map(t => (t.id === task.id ? response.data : t)));
     } catch (err) {
       setError('Failed to update task status');
       console.error(err);
@@ -100,7 +92,7 @@ const TasksPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      await api.delete(`/api/${user?.id}/tasks/${taskId}`);
+      await apiClient.deleteTodo(taskId); // ✅ deleteTodo
       setTasks(prev => prev.filter(task => task.id !== taskId));
     } catch (err) {
       setError('Failed to delete task');
