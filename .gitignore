@@ -119,3 +119,9 @@ desktop.ini
 .env*.prod
 .env.backup
 .env.local.backup
+
+
+node_modules
+
+fronted/.next/
+fronted/node_modules/
