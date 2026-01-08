@@ -1,3 +1,0 @@
-module.exports=[23649,a=>{"use strict";var b=a.i(18332);let c=({children:a})=>(0,b.jsx)("div",{className:"min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8",children:(0,b.jsx)("div",{className:"max-w-md w-full space-y-8",children:a})});function d({children:a}){return(0,b.jsx)(c,{children:a})}a.s(["default",()=>d],23649)}];
-
-//# sourceMappingURL=frontend_src_app_auth_layout_tsx_0b773b37._.js.map
