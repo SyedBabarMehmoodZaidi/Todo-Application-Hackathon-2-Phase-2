@@ -6,7 +6,8 @@ import { Task, TaskCreate, TaskUpdate, TaskCompletionUpdate } from '../../../typ
 import TaskList from '../../../../components/TaskList';
 import TaskForm from '../../../../components/TaskForm';
 import TaskSkeleton from '../../../../components/TaskSkeleton';
-import { apiClient } from '@/lib/api'; 
+import { apiClient } from "@/lib/api";
+
 
 const TasksPage: React.FC = () => {
   const { user, loading } = useAuth();
