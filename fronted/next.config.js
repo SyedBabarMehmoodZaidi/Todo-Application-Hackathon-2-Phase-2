@@ -5,14 +5,6 @@ const nextConfig = {
     turbo: false
   },
 
-  
-  eslint: {
-    ignoreDuringBuilds: true
-  },
-  typescript: {
-    ignoreBuildErrors: true
-  },
-
   reactStrictMode: true,
   swcMinify: true
 };
