@@ -125,3 +125,7 @@ node_modules
 
 fronted/.next/
 fronted/node_modules/
+
+# Windows reserved device
+nul
+NUL
