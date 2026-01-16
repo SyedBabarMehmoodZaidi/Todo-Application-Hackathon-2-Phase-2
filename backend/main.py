@@ -33,12 +33,12 @@ def create_app():
     # Configure CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://0.0.0.0:3000"],  # Allow frontend origins
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://0.0.0.0:3000", "http://localhost:3002"],  # Allow frontend origins including Next.js dev server
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["*"],  # Allow all headers including Authorization
         # Expose the authorization header
-        expose_headers=["Access-Control-Allow-Origin", "Authorization", "Content-Type"]
+        expose_headers=["Access-Control-Allow-Origin", "Authorization", "Content-Type", "Access-Control-Allow-Credentials"]
     )
 
     # Include routers
@@ -50,12 +50,22 @@ def create_app():
     def startup_event():
         print("Starting up...")
         try:
-            # Create database tables
-            SQLModel.metadata.create_all(bind=engine)
-            print("Database tables created successfully")
+            # Create database tables with timeout handling
+            import threading
+            def create_tables():
+                try:
+                    SQLModel.metadata.create_all(bind=engine)
+                    print("Database tables created successfully")
+                except Exception as e:
+                    print(f"Error creating database tables: {e}")
+
+            # Run table creation in a separate thread to not block startup
+            table_thread = threading.Thread(target=create_tables)
+            table_thread.daemon = True
+            table_thread.start()
+            print("Database initialization started in background")
         except Exception as e:
-            print(f"Error creating database tables: {e}")
-            # Continue anyway to allow the app to start
+            print(f"Error initiating database setup: {e}")
 
     @app.get("/")
     def read_root():

@@ -50,13 +50,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchUserDetails = async (token: string) => {
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/users/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+
+      // Create a timeout promise to prevent indefinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout: Backend server not responding')), 60000); // 60 seconds timeout for Neon database connections
       });
+
+      // Race the fetch request against the timeout
+      const response = await Promise.race([
+        fetch(`${apiUrl}/api/users/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }),
+        timeoutPromise
+      ]) as Response;
 
       if (response.ok) {
         const userData = await response.json();
@@ -77,20 +87,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Call the actual backend API - using signin endpoint which expects JSON
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/auth/signin`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password
-        })
+
+      // Ensure the API URL doesn't have trailing slashes that might interfere with path joining
+      const normalizedApiUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+
+      // Create a timeout promise to prevent indefinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout: Backend server not responding')), 60000); // 60 seconds timeout for Neon database connections
       });
 
+      // Race the fetch request against the timeout
+      const response = await Promise.race([
+        fetch(`${normalizedApiUrl}/api/auth/signin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password
+          })
+        }),
+        timeoutPromise
+      ]) as Response;
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Login failed');
+        // Handle different error status codes appropriately
+        let errorMessage = 'Login failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, try to get text
+          errorMessage = await response.text().catch(() => errorMessage);
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -110,7 +142,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      // Re-throw the error so the calling component can handle it
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Cannot connect to backend server. Please ensure the backend is running.');
+      } else if (error instanceof Error && error.message.includes('timeout')) {
+        throw new Error('Request timeout: Backend server is taking too long to respond. Please ensure the backend is running and accessible.');
+      } else {
+        throw error instanceof Error ? error : new Error('Login failed');
+      }
     }
   };
 
@@ -118,21 +157,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Call the actual backend API - using signup endpoint which expects JSON
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/auth/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          username: username || email.split('@')[0]
-        })
+
+      // Ensure the API URL doesn't have trailing slashes that might interfere with path joining
+      const normalizedApiUrl = apiUrl.endsWith('/') ? apiUrl.slice(0, -1) : apiUrl;
+
+      // Create a timeout promise to prevent indefinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout: Backend server not responding')), 60000); // 60 seconds timeout for Neon database connections
       });
 
+      // Race the fetch request against the timeout
+      const response = await Promise.race([
+        fetch(`${normalizedApiUrl}/api/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            username: username || email.split('@')[0]
+          })
+        }),
+        timeoutPromise
+      ]) as Response;
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Registration failed');
+        // Handle different error status codes appropriately
+        let errorMessage = 'Registration failed';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || errorMessage;
+        } catch (parseError) {
+          // If response is not JSON, try to get text
+          errorMessage = await response.text().catch(() => errorMessage);
+        }
+
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -152,7 +213,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(userData);
     } catch (error) {
       console.error('Registration error:', error);
-      throw error;
+      // Re-throw the error so the calling component can handle it
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Network error: Cannot connect to backend server. Please ensure the backend is running.');
+      } else if (error instanceof Error && error.message.includes('timeout')) {
+        throw new Error('Request timeout: Backend server is taking too long to respond. Please ensure the backend is running and accessible.');
+      } else {
+        throw error instanceof Error ? error : new Error('Registration failed');
+      }
     }
   };
 
