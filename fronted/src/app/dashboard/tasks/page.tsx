@@ -2,39 +2,58 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../../../components/AuthProvider';
+import { useNotification } from '../../../../components/NotificationProvider';
 import { Task, TaskCreate, TaskUpdate, TaskCompletionUpdate } from '../../../types/task';
 import TaskList from '../../../../components/TaskList';
 import TaskForm from '../../../../components/TaskForm';
+import TaskFilters from '../../../../components/TaskFilters';
 import TaskSkeleton from '../../../../components/TaskSkeleton';
 import { apiClient } from "../../../lib/api";
 
 
 const TasksPage: React.FC = () => {
   const { user, loading } = useAuth();
+  const { showNotification } = useNotification();
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Filter and sort state
+  const [completedFilter, setCompletedFilter] = useState<'all' | 'completed' | 'pending'>('all');
+  const [dueDateStart, setDueDateStart] = useState<string>('');
+  const [dueDateEnd, setDueDateEnd] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'created_at' | 'due_date' | 'title'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // ✅ Fetch tasks once user is available
   useEffect(() => {
     if (user) {
       fetchTasks();
     }
-  }, [user]);
+  }, [user, completedFilter, dueDateStart, dueDateEnd, sortBy, sortOrder]);
 
-  // ✅ SINGLE fetchTasks using apiClient
+  // ✅ SINGLE fetchTasks using apiClient with filters
   const fetchTasks = async () => {
     if (!user) return;
 
     try {
       setIsLoading(true);
-      const response = await apiClient.getUserTasks(user.id); // ✅ use getUserTasks
-      setTasks(response.data || []);
+      const response = await apiClient.getUserTasks({
+        completed: completedFilter === 'completed' ? true : completedFilter === 'pending' ? false : undefined,
+        due_date_start: dueDateStart || undefined,
+        due_date_end: dueDateEnd || undefined,
+        sort_by: sortBy,
+        sort_order: sortOrder
+      }); // ✅ use getUserTasks with filters
+      if (response.success) {
+        setTasks(response.data || []);
+      } else {
+        throw new Error(response.error || 'Failed to load tasks');
+      }
     } catch (err) {
-      setError('Failed to load tasks');
+      showNotification('error', 'Failed to load tasks. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -47,10 +66,15 @@ const TasksPage: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await apiClient.createTodo(taskData); // ✅ createTodo
-      setTasks(prev => [response.data, ...prev]);
+      if (response.success && response.data) {
+        setTasks(prev => [response.data, ...prev]);
+      } else {
+        throw new Error(response.error || 'Failed to add task');
+      }
       setShowForm(false);
+      showNotification('success', 'Task added successfully!');
     } catch (err) {
-      setError('Failed to add task');
+      showNotification('error', 'Failed to add task. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -63,11 +87,16 @@ const TasksPage: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await apiClient.updateTodo(editingTask.id, taskData); // ✅ updateTodo
-      setTasks(prev => prev.map(task => (task.id === editingTask.id ? response.data : task)));
+      if (response.success && response.data) {
+        setTasks(prev => prev.map(task => (task.id === editingTask.id ? response.data : task)));
+      } else {
+        throw new Error(response.error || 'Failed to update task');
+      }
       setEditingTask(null);
       setShowForm(false);
+      showNotification('success', 'Task updated successfully!');
     } catch (err) {
-      setError('Failed to update task');
+      showNotification('error', 'Failed to update task. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -77,11 +106,16 @@ const TasksPage: React.FC = () => {
   const handleToggleComplete = async (task: Task) => {
     try {
       setIsLoading(true);
-      const updateData: TaskCompletionUpdate = { is_completed: !task.is_completed };
-      const response = await apiClient.toggleTodoCompletion(task.id, !task.is_completed); // ✅ toggleTodoCompletion
-      setTasks(prev => prev.map(t => (t.id === task.id ? response.data : t)));
+      const updateData: TaskCompletionUpdate = { completed: !task.completed };
+      const response = await apiClient.toggleTodoCompletion(task.id, !task.completed); // ✅ toggleTodoCompletion
+      if (response.success && response.data) {
+        setTasks(prev => prev.map(t => (t.id === task.id ? response.data : t)));
+      } else {
+        throw new Error(response.error || 'Failed to update task status');
+      }
+      showNotification('success', `Task marked as ${!task.completed ? 'completed' : 'pending'}!`);
     } catch (err) {
-      setError('Failed to update task status');
+      showNotification('error', 'Failed to update task status. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -93,10 +127,15 @@ const TasksPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      await apiClient.deleteTodo(taskId); // ✅ deleteTodo
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+      const response = await apiClient.deleteTodo(taskId); // ✅ deleteTodo
+      if (response.success) {
+        setTasks(prev => prev.filter(task => task.id !== taskId));
+      } else {
+        throw new Error(response.error || 'Failed to delete task');
+      }
+      showNotification('success', 'Task deleted successfully!');
     } catch (err) {
-      setError('Failed to delete task');
+      showNotification('error', 'Failed to delete task. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -119,17 +158,24 @@ const TasksPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Your Tasks</h1>
         <p className="text-sm text-gray-500">Manage your personal todo list</p>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
+      <TaskFilters
+        completedFilter={completedFilter}
+        setCompletedFilter={setCompletedFilter}
+        dueDateStart={dueDateStart}
+        setDueDateStart={setDueDateStart}
+        dueDateEnd={dueDateEnd}
+        setDueDateEnd={setDueDateEnd}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+      />
 
       <button
         onClick={() => {

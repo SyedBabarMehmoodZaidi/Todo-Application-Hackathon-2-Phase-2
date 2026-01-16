@@ -1,8 +1,0 @@
-Name: authorization-enforcement
-Description: Ensure users can only access their own resources
-Components:
-  - User ID extraction from JWT
-  - Query-level data filtering
-  - Ownership validation checks
-  - Forbidden access handling
-Reusable: true

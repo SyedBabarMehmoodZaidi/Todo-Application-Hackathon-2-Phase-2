@@ -1,8 +1,0 @@
-Name: api-design
-Description: RESTful API endpoint creation with proper HTTP methods
-Components:
-  - Request/Response schemas (Pydantic)
-  - HTTP status code conventions
-  - Error handling patterns
-  - CRUD operation templates
-Reusable: true

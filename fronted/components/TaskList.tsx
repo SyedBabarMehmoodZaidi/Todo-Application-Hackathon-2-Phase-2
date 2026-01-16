@@ -28,20 +28,20 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleComplete, onDelete, 
         <li
           key={task.id}
           className={`py-4 transition-all duration-300 ${
-            task.is_completed ? 'opacity-70 transform scale-[0.98]' : 'opacity-100'
+            task.completed ? 'opacity-70 transform scale-[0.98]' : 'opacity-100'
           }`}
         >
           <div className="flex items-center">
             <input
               type="checkbox"
-              checked={task.is_completed}
+              checked={task.completed}
               onChange={() => onToggleComplete(task)}
               className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 dark:border-gray-600 cursor-pointer"
             />
             <div className="ml-4 flex-1 min-w-0">
               <p
                 className={`text-sm font-medium transition-all duration-300 ${
-                  task.is_completed
+                  task.completed
                     ? 'text-gray-500 dark:text-gray-400 line-through'
                     : 'text-gray-900 dark:text-white'
                 }`}
@@ -57,6 +57,23 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onToggleComplete, onDelete, 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   Due: {new Date(task.due_date).toLocaleDateString()}
+                </div>
+              )}
+              {task.categories && task.categories.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {task.categories.map((category) => (
+                    <span
+                      key={category.id}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                      style={{
+                        backgroundColor: `${category.color}20`, // Add opacity to the color
+                        color: category.color,
+                        border: `1px solid ${category.color}`
+                      }}
+                    >
+                      {category.name}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

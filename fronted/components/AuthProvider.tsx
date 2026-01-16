@@ -25,57 +25,133 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check if user is logged in on initial load
     const token = localStorage.getItem('access_token');
     if (token) {
-      // In a real app, you would verify the token and get user details
-      // For now, we'll just set a placeholder
-      // In a real implementation, you'd make an API call to get user details
+      // Verify the token and get user details from the token payload
+      try {
+        const tokenPayload = JSON.parse(atob(token.split('.')[1])); // Decode JWT payload
+        const exp = tokenPayload.exp;
+        const currentTime = Math.floor(Date.now() / 1000);
+
+        if (exp && currentTime < exp) {
+          // Token is valid, create a minimal user object
+          // We'll fetch full user details separately to ensure accuracy
+          fetchUserDetails(token);
+        } else {
+          // Token is expired, remove it
+          localStorage.removeItem('access_token');
+        }
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        localStorage.removeItem('access_token');
+      }
     }
     setLoading(false);
   }, []);
 
+  const fetchUserDetails = async (token: string) => {
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/users/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        // If the token is invalid, remove it
+        localStorage.removeItem('access_token');
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      localStorage.removeItem('access_token');
+      setUser(null);
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
-      // In a real app, you would call the login API
-      // const response = await api.post('/auth/login', { email, password });
-      // const { access_token, user } = response.data;
-      // localStorage.setItem('access_token', access_token);
-      // setUser(user);
+      // Call the actual backend API - using signin endpoint which expects JSON
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/auth/signin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
 
-      // Placeholder implementation
-      const mockUser: User = {
-        id: '1',
-        email,
-        username: email.split('@')[0],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_active: true,
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Login failed');
+      }
+
+      const data = await response.json();
+      const accessToken = data.access_token;
+
+      // Create user object based on response from backend
+      const userData: User = {
+        id: data.user?.id || '', // Use the actual user ID from the response
+        email: data.user?.email || email,
+        username: data.user?.username || email.split('@')[0],
+        created_at: data.user?.created_at || new Date().toISOString(),
+        updated_at: data.user?.updated_at || new Date().toISOString(),
+        is_active: data.user?.is_active ?? true,
       };
-      localStorage.setItem('access_token', 'mock-token');
-      setUser(mockUser);
+
+      localStorage.setItem('access_token', accessToken);
+      setUser(userData);
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   };
 
   const register = async (email: string, password: string, username?: string) => {
     try {
-      // In a real app, you would call the register API
-      // const response = await api.post('/auth/register', { email, password, username });
-      // const { access_token, user } = response.data;
-      // localStorage.setItem('access_token', access_token);
-      // setUser(user);
+      // Call the actual backend API - using signup endpoint which expects JSON
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          username: username || email.split('@')[0]
+        })
+      });
 
-      // Placeholder implementation
-      const mockUser: User = {
-        id: '1',
-        email,
-        username: username || email.split('@')[0],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_active: true,
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Registration failed');
+      }
+
+      const data = await response.json();
+      const accessToken = data.access_token;
+
+      // Create user object based on response from backend
+      const userData: User = {
+        id: data.user?.id || '', // Use the actual user ID from the response
+        email: data.user?.email || email,
+        username: data.user?.username || username || email.split('@')[0],
+        created_at: data.user?.created_at || new Date().toISOString(),
+        updated_at: data.user?.updated_at || new Date().toISOString(),
+        is_active: data.user?.is_active ?? true,
       };
-      localStorage.setItem('access_token', 'mock-token');
-      setUser(mockUser);
+
+      localStorage.setItem('access_token', accessToken);
+      setUser(userData);
     } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   };

@@ -1,8 +1,0 @@
-Name: frontend-api-integration
-Description: Safe and consistent API communication from frontend
-Components:
-  - Centralized API client
-  - JWT token attachment
-  - Error boundary handling
-  - Async data fetching patterns
-Reusable: true

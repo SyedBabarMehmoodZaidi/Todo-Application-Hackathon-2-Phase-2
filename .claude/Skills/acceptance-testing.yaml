@@ -1,8 +1,0 @@
-Name: acceptance-testing
-Description: Validate implementation against acceptance criteria
-Components:
-  - Feature-level validation
-  - API response verification
-  - Authentication flow testing
-  - Edge case handling
-Reusable: true

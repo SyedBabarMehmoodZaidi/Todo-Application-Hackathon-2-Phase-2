@@ -1,8 +1,0 @@
-Name: jwt-authentication
-Description: Secure user authentication using JSON Web Tokens
-Components:
-  - Token issuance and expiry
-  - Authorization header parsing
-  - Signature verification
-  - User identity extraction
-Reusable: true

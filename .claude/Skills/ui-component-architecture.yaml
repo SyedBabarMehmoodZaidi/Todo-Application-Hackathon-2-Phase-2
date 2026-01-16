@@ -1,8 +1,0 @@
-Name: ui-component-architecture
-Description: Build reusable and maintainable UI components
-Components:
-  - Atomic component structure
-  - Server vs Client component decision
-  - Tailwind utility patterns
-  - State and props management
-Reusable: true
